@@ -24,15 +24,19 @@ output_dir = os.path.join(current_dir, "fotogramas_generados")
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+# Variable de control para detener el procesamiento
+stop_processing = False
+
 # Función para procesar video desde archivo mp4
 def process_video(file_path, progress_bar, progress_label):
+    global stop_processing
     cap = cv2.VideoCapture(file_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_count = 0
     detected_emotions = []
     start_time = time.time()
 
-    while cap.isOpened():
+    while cap.isOpened() and not stop_processing:
         ret, frame = cap.read()
         if not ret:
             break
@@ -72,6 +76,7 @@ def process_video(file_path, progress_bar, progress_label):
         root.update_idletasks()
 
     cap.release()
+    cv2.destroyAllWindows()
     with open("emociones_detectadas.txt", "w") as file:
         for emotion in detected_emotions:
             file.write(emotion + "\n")
@@ -133,11 +138,18 @@ def start_live_capture(camera_index):
 
 # Función para seleccionar archivo mp4
 def select_file():
+    global stop_processing
+    stop_processing = False
     file_path = filedialog.askopenfilename(filetypes=[("MP4 files", "*.mp4")])
     if file_path:
         progress_bar['value'] = 0
         progress_label.config(text="0%")
         threading.Thread(target=process_video, args=(file_path, progress_bar, progress_label)).start()
+
+# Función para detener el procesamiento
+def stop_processing_video():
+    global stop_processing
+    stop_processing = True
 
 # Crear la ventana principal
 root = tk.Tk()
@@ -158,6 +170,10 @@ progress_bar.pack()
 # Label para mostrar el porcentaje de progreso
 progress_label = tk.Label(root, text="0%")
 progress_label.pack()
+
+# Botón para detener el procesamiento del video
+stop_button = tk.Button(root, text="Detener procesamiento", command=stop_processing_video)
+stop_button.pack()
 
 # Botón para iniciar la captura de video en vivo
 live_capture_button = tk.Button(root, text="Iniciar captura en vivo (para terminar presionar Q)", command=lambda: start_live_capture(camera_var.get()))
